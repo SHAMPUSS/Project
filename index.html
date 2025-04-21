@@ -168,6 +168,11 @@
     tg.sendData(JSON.stringify(resultData));
     tg.close();
 }
+        // В конец функции sendResults()
+tg.MainButton.setText("Посмотреть рейтинг").show();
+tg.MainButton.onClick(() => {
+    tg.sendData(JSON.stringify({action: "get_rating"}));
+});
     </script>
 </body>
 </html>
