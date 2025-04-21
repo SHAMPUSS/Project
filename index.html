@@ -157,13 +157,17 @@
 
         // Отправка результатов боту
         function sendResults(type) {
-            tg.sendData(JSON.stringify({
-                type: type,
-                score: correctAnswers,
-                total: currentQuestions.length
-            }));
-            tg.close();
+    const resultData = {
+        action: type,  // "test", "quiz" или "trivia"
+        result: {
+            score: correctAnswers,
+            total: currentQuestions.length
         }
+    };
+    console.log("Отправка данных:", resultData); // Для отладки
+    tg.sendData(JSON.stringify(resultData));
+    tg.close();
+}
     </script>
 </body>
 </html>
