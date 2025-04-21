@@ -1,46 +1,168 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Математический калькулятор</title>
+    <title>Тесты и Викторины</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; }
+        .tab { display: none; }
         button { padding: 10px; margin: 5px; }
-        input { padding: 10px; width: 100%; }
+        .tab-buttons { display: flex; gap: 10px; margin-bottom: 20px; }
+        .quiz-option { display: block; margin: 10px 0; }
     </style>
 </head>
 <body>
-    <h2>Калькулятор</h2>
-    <input type="number" id="num1" placeholder="Число 1">
-    <input type="number" id="num2" placeholder="Число 2">
-    <button onclick="calculate('+')">+</button>
-    <button onclick="calculate('-')">-</button>
-    <button onclick="sendToBot()">Отправить результат боту</button>
-    <p id="result"></p>
+    <div class="tab-buttons">
+        <button onclick="openTab('tests')">Тесты</button>
+        <button onclick="openTab('quizzes')">Квизы</button>
+        <button onclick="openTab('trivia')">Викторины</button>
+    </div>
+
+    <!-- Тесты (с вариантами) -->
+    <div id="tests" class="tab">
+        <h2>Тесты</h2>
+        <div id="test-container"></div>
+        <button id="next-test" onclick="nextTest()" style="display:none;">Далее</button>
+        <button onclick="sendResults('test')">Отправить результаты</button>
+    </div>
+
+    <!-- Викторины (вопрос-ответ) -->
+    <div id="trivia" class="tab" style="display:none;">
+        <h2>Викторины</h2>
+        <div id="trivia-container"></div>
+        <input type="text" id="trivia-answer" placeholder="Ваш ответ">
+        <button onclick="checkTrivia()">Проверить</button>
+    </div>
+
+    <!-- Квизы (тематические) -->
+    <div id="quizzes" class="tab" style="display:none;">
+        <h2>Квизы</h2>
+        <select id="quiz-topic">
+            <option value="informatics">Информатика</option>
+            <option value="mathematics">Математика</option>
+        </select>
+        <div id="quiz-container"></div>
+        <button onclick="sendResults('quiz')">Отправить результаты</button>
+    </div>
 
     <script>
         const tg = window.Telegram.WebApp;
-        tg.expand();  // Раскрываем WebApp на весь экран
+        tg.expand();
+        let correctAnswers = 0;
+        let currentQuestions = [];
+        let currentIndex = 0;
 
-        function calculate(operator) {
-            const num1 = parseFloat(document.getElementById('num1').value);
-            const num2 = parseFloat(document.getElementById('num2').value);
-            let result;
-            switch (operator) {
-                case '+': result = num1 + num2; break;
-                case '-': result = num1 - num2; break;
+        // Данные вопросов (можно вынести в отдельный файл)
+        const questions = {
+            informatics: {
+                test: [
+                    {
+                        question: "Что такое алгоритм?",
+                        options: ["Программа", "Последовательность действий", "Файл"],
+                        answer: "Последовательность действий"
+                    }
+                ],
+                trivia: [
+                    { question: "Кто создал Python?", answer: "Гвидо ван Россум" }
+                ]
+            },
+            mathematics: {
+                test: [
+                    {
+                        question: "Сколько градусов в треугольнике?",
+                        options: ["90", "180", "360"],
+                        answer: "180"
+                    }
+                ]
             }
-            document.getElementById('result').innerText = `Результат: ${result}`;
-            window.result = result;  // Сохраняем для отправки
+        };
+
+        // Вкладки
+        function openTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.style.display = 'none';
+            });
+            document.getElementById(tabName).style.display = 'block';
+            loadTabContent(tabName);
         }
 
-        function sendToBot() {
-            if (window.result) {
-                tg.sendData(JSON.stringify({ result: window.result }));  // Отправляем данные боту
-                tg.close();  // Закрываем WebApp
+        // Загрузка контента для вкладки
+        function loadTabContent(tabName) {
+            if (tabName === 'tests') loadTest();
+            else if (tabName === 'trivia') loadTrivia();
+            else if (tabName === 'quizzes') loadQuiz();
+        }
+
+        // Загрузка теста
+        function loadTest() {
+            const container = document.getElementById('test-container');
+            const topic = 'informatics'; // Можно добавить выбор темы
+            currentQuestions = questions[topic]?.test || [];
+            currentIndex = 0;
+            correctAnswers = 0;
+            showTestQuestion();
+        }
+
+        function showTestQuestion() {
+            const container = document.getElementById('test-container');
+            if (currentIndex >= currentQuestions.length) {
+                container.innerHTML = `<p>Тест завершён! Правильных ответов: ${correctAnswers}/${currentQuestions.length}</p>`;
+                return;
             }
+
+            const question = currentQuestions[currentIndex];
+            let html = `<p>${question.question}</p>`;
+            question.options.forEach(option => {
+                html += `<button class="quiz-option" onclick="checkTestAnswer('${option}')">${option}</button>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function checkTestAnswer(selected) {
+            const correct = currentQuestions[currentIndex].answer;
+            if (selected === correct) correctAnswers++;
+            currentIndex++;
+            showTestQuestion();
+        }
+
+        // Загрузка викторины
+        function loadTrivia() {
+            const container = document.getElementById('trivia-container');
+            const topic = 'informatics';
+            currentQuestions = questions[topic]?.trivia || [];
+            currentIndex = 0;
+            correctAnswers = 0;
+            showTriviaQuestion();
+        }
+
+        function showTriviaQuestion() {
+            const container = document.getElementById('trivia-container');
+            if (currentIndex >= currentQuestions.length) {
+                container.innerHTML = `<p>Викторина завершена! Правильных ответов: ${correctAnswers}/${currentQuestions.length}</p>`;
+                return;
+            }
+            container.innerHTML = `<p>${currentQuestions[currentIndex].question}</p>`;
+        }
+
+        function checkTrivia() {
+            const answer = document.getElementById('trivia-answer').value;
+            const correct = currentQuestions[currentIndex].answer;
+            if (answer.trim().toLowerCase() === correct.toLowerCase()) correctAnswers++;
+            currentIndex++;
+            document.getElementById('trivia-answer').value = '';
+            showTriviaQuestion();
+        }
+
+        // Отправка результатов боту
+        function sendResults(type) {
+            tg.sendData(JSON.stringify({
+                type: type,
+                score: correctAnswers,
+                total: currentQuestions.length
+            }));
+            tg.close();
         }
     </script>
 </body>
